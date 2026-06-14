@@ -1,0 +1,33 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="clicky_windows.Views.OverlayWindow"
+        Title="Clicky Overlay"
+        Background="Transparent"
+        TransparencyLevelHint="Transparent"
+        WindowDecorations="None"
+        Topmost="True"
+        WindowState="FullScreen"
+        ShowInTaskbar="False">
+
+    <Canvas Name="MainCanvas" Background="Transparent" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+        <!-- Blue Cursor Companion -->
+        <StackPanel Name="CursorCompanion" Orientation="Vertical" Spacing="6" Width="200">
+            <!-- Speech Bubble -->
+            <Border Name="SpeechBubble" Background="#18181B" BorderBrush="#27272A" BorderThickness="1" CornerRadius="8" Padding="10,6" MaxWidth="180" HorizontalAlignment="Center" IsVisible="False">
+                <TextBlock Name="BubbleText" Text="" FontSize="11" Foreground="White" TextWrapping="Wrap" HorizontalAlignment="Center"/>
+            </Border>
+
+            <!-- Waveform visualizer (when listening/processing) -->
+            <StackPanel Name="WaveformPanel" Orientation="Horizontal" Spacing="3" Height="20" HorizontalAlignment="Center" IsVisible="False">
+                <Rectangle Width="3" Height="6" Fill="#3B82F6" RadiusX="1.5" RadiusY="1.5"/>
+                <Rectangle Width="3" Height="12" Fill="#3B82F6" RadiusX="1.5" RadiusY="1.5"/>
+                <Rectangle Width="3" Height="6" Fill="#3B82F6" RadiusX="1.5" RadiusY="1.5"/>
+                <Rectangle Width="3" Height="18" Fill="#3B82F6" RadiusX="1.5" RadiusY="1.5"/>
+                <Rectangle Width="3" Height="8" Fill="#3B82F6" RadiusX="1.5" RadiusY="1.5"/>
+            </StackPanel>
+
+            <!-- Blue Cursor Triangle -->
+            <Path Data="M 0,0 L 12,24 L 24,12 Z" Fill="#2563EB" Width="24" Height="24" HorizontalAlignment="Center"/>
+        </StackPanel>
+    </Canvas>
+</Window>

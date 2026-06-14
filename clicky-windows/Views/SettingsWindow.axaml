@@ -1,0 +1,78 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="using:clicky_windows"
+        x:Class="clicky_windows.Views.SettingsWindow"
+        Title="Clicky Settings"
+        Width="320" Height="240"
+        WindowStartupLocation="Manual"
+        WindowDecorations="None"
+        Topmost="True"
+        Background="#18181B"
+        CornerRadius="12"
+        BorderThickness="1"
+        BorderBrush="#27272A"
+        ShowInTaskbar="False">
+
+    <Window.Styles>
+        <Style Selector="Button">
+            <Setter Property="Background" Value="#27272A"/>
+            <Setter Property="Foreground" Value="#E4E4E7"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button:hover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#3F3F46"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style Selector="ToggleButton">
+            <Setter Property="Background" Value="#27272A"/>
+            <Setter Property="Foreground" Value="#E4E4E7"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,6"/>
+            <Setter Property="CornerRadius" Value="6"/>
+        </Style>
+        <Style Selector="ToggleButton:checked /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2563EB"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" Margin="16">
+        <!-- Header -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <Ellipse Name="StatusDot" Width="10" Height="10" Fill="#A1A1AA" VerticalAlignment="Center"/>
+                <TextBlock Text="Clicky" FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+            </StackPanel>
+            <TextBlock Name="StatusText" Grid.Column="1" Text="Setup" FontSize="12" Foreground="#A1A1AA" VerticalAlignment="Center"/>
+        </Grid>
+
+        <!-- Content -->
+        <StackPanel Grid.Row="1" Spacing="12" Margin="0,10">
+            <TextBlock Text="Hold Ctrl+Alt to talk." FontSize="12" Foreground="#A1A1AA"/>
+
+            <!-- Clicky Toggle -->
+            <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
+                <TextBlock Text="Show Clicky Cursor" Foreground="#E4E4E7" VerticalAlignment="Center"/>
+                <ToggleSwitch Name="ClickyCursorToggle" Grid.Column="1" IsChecked="True" OnContent="" OffContent="" Theme="{StaticResource {x:Type ToggleSwitch}}"/>
+            </Grid>
+
+            <!-- Model Picker -->
+            <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
+                <TextBlock Text="AI Model" Foreground="#E4E4E7" VerticalAlignment="Center"/>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                    <RadioButton Name="SonnetRadio" Content="Sonnet" GroupName="ModelGroup" IsChecked="True" Theme="{StaticResource {x:Type RadioButton}}"/>
+                    <RadioButton Name="OpusRadio" Content="Opus" GroupName="ModelGroup" Theme="{StaticResource {x:Type RadioButton}}"/>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+
+        <!-- Footer -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,12,0,0">
+            <Button Name="QuitButton" Grid.Column="0" Content="Quit Clicky" Click="OnQuitClick" Background="#3F1D1D" Foreground="#FCA5A5"/>
+            <Button Name="CloseButton" Grid.Column="1" Content="Close" Click="OnCloseClick"/>
+        </Grid>
+    </Grid>
+</Window>

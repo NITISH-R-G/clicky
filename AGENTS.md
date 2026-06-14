@@ -23,6 +23,16 @@ All API keys live on a Cloudflare Worker proxy — nothing sensitive ships in th
 - **Concurrency**: `@MainActor` isolation, async/await throughout
 - **Analytics**: PostHog via `ClickyAnalytics.swift`
 
+### Windows Architecture
+
+- **App Type**: System tray app, no taskbar icon or main window.
+- **Framework**: Avalonia UI (.NET 8 with C#) for system tray icon and transparent cursor overlay.
+- **Global Hotkey**: Win32 low-level keyboard hook (`SetWindowsHookEx` with `WH_KEYBOARD_LL`) monitoring `Ctrl + Alt` presses/releases.
+- **Screen Capture**: Win32 GDI (`BitBlt`) capturing multi-monitor displays.
+- **Audio Capture & Playback**: NAudio capturing PCM16 mono 16kHz microphone stream and playing ElevenLabs TTS MP3 streams.
+- **Core Logic**: Native C# implementation of the state manager and API clients.
+
+
 ### API Proxy (Cloudflare Worker)
 
 The app never calls external APIs directly. All requests go through a Cloudflare Worker (`worker/src/index.ts`) that holds the real API keys as secrets.
@@ -76,6 +86,22 @@ Worker vars: `ELEVENLABS_VOICE_ID`
 | `AppBundleConfiguration.swift` | ~28 | Runtime configuration reader for keys stored in the app bundle Info.plist. |
 | `worker/src/index.ts` | ~142 | Cloudflare Worker proxy. Three routes: `/chat` (Claude), `/tts` (ElevenLabs), `/transcribe-token` (AssemblyAI temp token). |
 
+### Windows Key Files
+
+| File | Lines | Purpose |
+|------|-------|---------|
+| `clicky-windows/App.axaml.cs` | ~150 | Windows app entry point and system tray initialization. |
+| `clicky-windows/CompanionManager.cs` | ~340 | Central state manager and C# port of the push-to-talk voice pipeline. |
+| `clicky-windows/Views/OverlayWindow.axaml.cs` | ~180 | Transparent click-through overlay view drawing mouse-following cursor, bezier pointing, and waveform. |
+| `clicky-windows/Views/SettingsWindow.axaml.cs` | ~90 | System tray configuration settings view. |
+| `clicky-windows/ScreenCapturer.cs` | ~150 | Screen capture via Win32 GDI BitBlt. |
+| `clicky-windows/AudioRecorder.cs` | ~80 | Audio capture via NAudio WaveInEvent. |
+| `clicky-windows/GlobalHotkey.cs` | ~120 | System-wide Ctrl+Alt keyboard hook listener. |
+| `clicky-windows/AssemblyAIClient.cs` | ~210 | AssemblyAI websocket streaming transcription client. |
+| `clicky-windows/ClaudeClient.cs` | ~110 | Claude API client routing through proxy. |
+| `clicky-windows/ElevenLabsClient.cs` | ~90 | ElevenLabs TTS audio playback client. |
+
+
 ## Build & Run
 
 ```bash
@@ -89,6 +115,15 @@ open leanring-buddy.xcodeproj
 ```
 
 **Do NOT run `xcodebuild` from the terminal** — it invalidates TCC (Transparency, Consent, and Control) permissions and the app will need to re-request screen recording, accessibility, etc.
+
+### Windows Build & Run
+
+```bash
+cd clicky-windows
+dotnet build
+dotnet run
+```
+
 
 ## Cloudflare Worker
 
