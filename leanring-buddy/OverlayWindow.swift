@@ -808,7 +808,7 @@ class OverlayWindowManager {
     }
 
     func hideOverlay() {
-        for window in overlayWindows {
+        overlayWindows.forEach { window in
             window.orderOut(nil)
             window.contentView = nil
         }
