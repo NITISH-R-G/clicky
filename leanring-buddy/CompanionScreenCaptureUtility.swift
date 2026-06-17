@@ -69,6 +69,10 @@ enum CompanionScreenCaptureUtility {
 
         var capturedScreens: [CompanionScreenCapture] = []
 
+        // Optimization: SCStreamConfiguration is an NSObject reference type.
+        // We reuse a single instance across all displays to avoid repeated heap
+        // allocation overhead. This is safe because the async capture sequence
+        // operates strictly sequentially without overlapping mutations.
         let configuration = SCStreamConfiguration()
         let maxDimension = 1280
 
