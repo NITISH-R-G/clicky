@@ -329,12 +329,15 @@ private final class AssemblyAIStreamingTranscriptionSession: NSObject, BuddyStre
     }
 
     private func composeFullTranscript() -> String {
-        let committedTranscriptSegments = storedTurnTranscriptsByOrder
-            .sorted(by: { $0.key < $1.key })
-            .map(\.value.transcriptText)
-            .filter { !$0.isEmpty }
+        var transcriptSegments: [String] = []
+        transcriptSegments.reserveCapacity(storedTurnTranscriptsByOrder.count + 1)
 
-        var transcriptSegments = committedTranscriptSegments
+        let sortedKeys = storedTurnTranscriptsByOrder.keys.sorted()
+        for key in sortedKeys {
+            if let text = storedTurnTranscriptsByOrder[key]?.transcriptText, !text.isEmpty {
+                transcriptSegments.append(text)
+            }
+        }
 
         let trimmedActiveTurnTranscriptText = activeTurnTranscriptText
             .trimmingCharacters(in: .whitespacesAndNewlines)
