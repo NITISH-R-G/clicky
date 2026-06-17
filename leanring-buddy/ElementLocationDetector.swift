@@ -235,7 +235,7 @@ class ElementLocationDetector {
     /// Parses the Computer Use API response to extract click coordinates.
     /// Claude returns a `tool_use` content block with `{"action": "left_click", "coordinate": [x, y]}`.
     /// If Claude returns text instead (no element found), returns nil.
-    private func parseCoordinateFromResponse(data: Data) -> CGPoint? {
+    func parseCoordinateFromResponse(data: Data) -> CGPoint? {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let contentBlocks = json["content"] as? [[String: Any]] else {
             print("⚠️ ElementLocationDetector: could not parse response JSON")
