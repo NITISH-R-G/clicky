@@ -37,7 +37,7 @@ struct PerformanceTests {
             return
         }
 
-        let detector = ElementLocationDetector(apiKey: "dummy")
+
         let targetWidth = 1280
         let targetHeight = 800
 
