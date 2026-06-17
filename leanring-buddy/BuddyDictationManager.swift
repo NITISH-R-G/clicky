@@ -666,22 +666,17 @@ final class BuddyDictationManager: NSObject, ObservableObject {
 
         let combinedKeyterms = baseKeyterms + contextualKeyterms
         var uniqueNormalizedKeyterms = Set<String>()
-        var orderedKeyterms: [String] = []
 
-        for keyterm in combinedKeyterms {
+        return combinedKeyterms.compactMap { keyterm in
             let trimmedKeyterm = keyterm.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !trimmedKeyterm.isEmpty else { continue }
+            guard !trimmedKeyterm.isEmpty else { return nil }
 
             let normalizedKeyterm = trimmedKeyterm.lowercased()
-            if uniqueNormalizedKeyterms.contains(normalizedKeyterm) {
-                continue
+            if uniqueNormalizedKeyterms.insert(normalizedKeyterm).inserted {
+                return trimmedKeyterm
             }
-
-            uniqueNormalizedKeyterms.insert(normalizedKeyterm)
-            orderedKeyterms.append(trimmedKeyterm)
+            return nil
         }
-
-        return orderedKeyterms
     }
 
     private func updateAudioPowerLevel(from audioBuffer: AVAudioPCMBuffer) {
