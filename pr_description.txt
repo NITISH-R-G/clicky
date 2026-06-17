@@ -1,7 +1,0 @@
-💡 **What:** Minor refactor to improve overlay cleanup process. Switched `hideOverlay` to use `.forEach` instead of a `for...in` loop.
-
-🎯 **Why:** This refactoring allows a slightly cleaner and direct memory management model. `forEach` is an eager function that applies the closure directly, minimizing iterator overhead and making the intent clearer when operating on the collection's items for side effects (like nullifying views and ordering out windows).
-
-📊 **Measured Improvement:** Direct performance benchmarking for this specific code path is impractical as it manipulates `NSWindow` UI objects across multiple screens. This fundamentally requires a running AppKit UI application and is tied to the window manager/GPU composite overhead, meaning any microbenchmark of loop execution times would be noise.
-
-However, substituting `forEach` for `for...in` is fundamentally a more explicit syntax for side-effect-only loops over collections, providing cleaner code. Given the collection size is very small (usually 1-3 windows, corresponding to physical displays), memory and execution overhead differences are minimal, but the `.forEach` explicitly communicates the direct mapping intended for memory cleanup without exposing an iterator scope.
