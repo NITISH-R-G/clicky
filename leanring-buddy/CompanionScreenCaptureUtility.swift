@@ -57,25 +57,30 @@ enum CompanionScreenCaptureUtility {
             }
         }
 
+        // Pre-calculate display frames to avoid repetitive dictionary lookups during sorting and iteration.
+        // Use NSScreen.frame (AppKit coordinates, bottom-left origin) so
+        // displayFrame is in the same coordinate system as NSEvent.mouseLocation
+        // and the overlay window's screenFrame in BlueCursorView.
+        let displaysWithFrames = content.displays.map { display -> (display: SCDisplay, frame: CGRect) in
+            let frame = nsScreenByDisplayID[display.displayID]?.frame
+                ?? CGRect(x: display.frame.origin.x, y: display.frame.origin.y,
+                          width: CGFloat(display.width), height: CGFloat(display.height))
+            return (display, frame)
+        }
+
         // Sort displays so the cursor screen is always first
-        let sortedDisplays = content.displays.sorted { displayA, displayB in
-            let frameA = nsScreenByDisplayID[displayA.displayID]?.frame ?? displayA.frame
-            let frameB = nsScreenByDisplayID[displayB.displayID]?.frame ?? displayB.frame
-            let aContainsCursor = frameA.contains(mouseLocation)
-            let bContainsCursor = frameB.contains(mouseLocation)
+        let sortedDisplays = displaysWithFrames.sorted { a, b in
+            let aContainsCursor = a.frame.contains(mouseLocation)
+            let bContainsCursor = b.frame.contains(mouseLocation)
             if aContainsCursor != bContainsCursor { return aContainsCursor }
             return false
         }
 
         var capturedScreens: [CompanionScreenCapture] = []
 
-        for (displayIndex, display) in sortedDisplays.enumerated() {
-            // Use NSScreen.frame (AppKit coordinates, bottom-left origin) so
-            // displayFrame is in the same coordinate system as NSEvent.mouseLocation
-            // and the overlay window's screenFrame in BlueCursorView.
-            let displayFrame = nsScreenByDisplayID[display.displayID]?.frame
-                ?? CGRect(x: display.frame.origin.x, y: display.frame.origin.y,
-                          width: CGFloat(display.width), height: CGFloat(display.height))
+        for (displayIndex, item) in sortedDisplays.enumerated() {
+            let display = item.display
+            let displayFrame = item.frame
             let isCursorScreen = displayFrame.contains(mouseLocation)
 
             let filter = SCContentFilter(display: display, excludingWindows: ownAppWindows)
