@@ -267,53 +267,48 @@ class ElementLocationDetector {
     /// The target resolution should match the display's aspect ratio to avoid
     /// distortion that degrades coordinate accuracy.
     ///
-    /// **Critical Retina fix**: Uses `NSBitmapImageRep` directly instead of
-    /// `NSImage.lockFocus()`. On Retina displays (2x backing scale), lockFocus
-    /// creates a bitmap at 2× the declared size (e.g., 2560×1600 for a 1280×800
-    /// NSImage). This means the JPEG sent to Claude would be 2× larger than the
-    /// resolution declared in the Computer Use tool definition, causing Claude's
-    /// pixel-counting to return coordinates in the wrong scale.
+    /// **Critical Retina fix**: Uses `CGContext` directly to draw the image at the
+    /// exact target pixel dimensions. This avoids Cocoa drawing context overhead,
+    /// bypasses Retina-scaling distortion naturally (unlike `NSImage` which scales
+    /// up by default), and improves overall rendering performance over `NSBitmapImageRep`.
     private func resizeScreenshotForComputerUse(
         originalImageData: Data,
         targetWidth: Int,
         targetHeight: Int
     ) -> Data? {
-        guard let originalImage = NSImage(data: originalImageData) else { return nil }
+        // Use ImageIO to load the original image data efficiently
+        guard let imageSource = CGImageSourceCreateWithData(originalImageData as CFData, nil),
+              let cgImage = CGImageSourceCreateImageAtIndex(imageSource, 0, nil) else {
+            return nil
+        }
 
-        // Create a bitmap representation with exact pixel dimensions.
-        // This bypasses NSImage's Retina-aware coordinate system which would
-        // otherwise double the actual pixel count on 2x displays.
-        guard let bitmapRep = NSBitmapImageRep(
-            bitmapDataPlanes: nil,
-            pixelsWide: targetWidth,
-            pixelsHigh: targetHeight,
-            bitsPerSample: 8,
-            samplesPerPixel: 4,
-            hasAlpha: true,
-            isPlanar: false,
-            colorSpaceName: .deviceRGB,
-            bytesPerRow: 0,
-            bitsPerPixel: 0
+        // Create a CoreGraphics bitmap context with exact pixel dimensions
+        let colorSpace = CGColorSpaceCreateDeviceRGB()
+        let bitmapInfo = CGImageAlphaInfo.premultipliedLast.rawValue | CGBitmapInfo.byteOrder32Big.rawValue
+
+        guard let context = CGContext(
+            data: nil,
+            width: targetWidth,
+            height: targetHeight,
+            bitsPerComponent: 8,
+            bytesPerRow: targetWidth * 4,
+            space: colorSpace,
+            bitmapInfo: bitmapInfo
         ) else {
             return nil
         }
 
-        // Set the point size to match pixel dimensions (1:1, no Retina scaling).
-        bitmapRep.size = NSSize(width: targetWidth, height: targetHeight)
+        // Draw the image directly into our fixed-size context
+        context.interpolationQuality = .high
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: targetWidth, height: targetHeight))
 
-        // Draw the original image into the exact-pixel-dimension bitmap
-        NSGraphicsContext.saveGraphicsState()
-        let graphicsContext = NSGraphicsContext(bitmapImageRep: bitmapRep)
-        NSGraphicsContext.current = graphicsContext
-        graphicsContext?.imageInterpolation = .high
-        originalImage.draw(
-            in: NSRect(x: 0, y: 0, width: targetWidth, height: targetHeight),
-            from: NSRect(origin: .zero, size: originalImage.size),
-            operation: .copy,
-            fraction: 1.0
-        )
-        NSGraphicsContext.restoreGraphicsState()
+        guard let resizedCGImage = context.makeImage() else {
+            return nil
+        }
 
+        // Convert back to JPEG using NSBitmapImageRep (keeps it simpler and avoids
+        // needing to explicitly import ImageIO for destination types)
+        let bitmapRep = NSBitmapImageRep(cgImage: resizedCGImage)
         guard let jpegData = bitmapRep.representation(using: .jpeg, properties: [.compressionFactor: 0.85]) else {
             return nil
         }
