@@ -33,6 +33,15 @@ namespace clicky_windows
         public void Start()
         {
             _hookId = SetHook(_proc);
+            if (_hookId == IntPtr.Zero)
+            {
+                int err = Marshal.GetLastWin32Error();
+                Console.WriteLine($"❌ GlobalHotkey: SetWindowsHookEx failed with Win32 error code: {err}");
+            }
+            else
+            {
+                Console.WriteLine($"⌨️ GlobalHotkey: Hook registered successfully (ID: {_hookId})");
+            }
         }
 
         public void Stop()
@@ -40,18 +49,15 @@ namespace clicky_windows
             if (_hookId != IntPtr.Zero)
             {
                 UnhookWindowsHookEx(_hookId);
+                Console.WriteLine("⌨️ GlobalHotkey: Hook uninstalled");
                 _hookId = IntPtr.Zero;
             }
         }
 
         private IntPtr SetHook(LowLevelKeyboardProc proc)
         {
-            using (Process curProcess = Process.GetCurrentProcess())
-            using (ProcessModule curModule = curProcess.MainModule!)
-            {
-                return SetWindowsHookEx(WH_KEYBOARD_LL, proc,
-                    GetModuleHandle(curModule.ModuleName), 0);
-            }
+            // For WH_KEYBOARD_LL, hMod can be IntPtr.Zero when threadId is 0
+            return SetWindowsHookEx(WH_KEYBOARD_LL, proc, IntPtr.Zero, 0);
         }
 
         private delegate IntPtr LowLevelKeyboardProc(int nCode, IntPtr wParam, IntPtr lParam);
@@ -66,11 +72,11 @@ namespace clicky_windows
                 bool isKeyDown = message == WM_KEYDOWN || message == WM_SYSKEYDOWN;
                 bool isKeyUp = message == WM_KEYUP || message == WM_SYSKEYUP;
 
-                if (vkCode == VK_CONTROL)
+                if (vkCode == VK_CONTROL || vkCode == 162 || vkCode == 163)
                 {
                     _ctrlHeld = isKeyDown;
                 }
-                else if (vkCode == VK_MENU)
+                else if (vkCode == VK_MENU || vkCode == 164 || vkCode == 165)
                 {
                     _altHeld = isKeyDown;
                 }

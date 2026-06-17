@@ -15,6 +15,7 @@ namespace clicky_windows
         private readonly List<OverlayWindow> _overlays = new();
         private SettingsWindow? _settingsWindow;
         private TrayIcon? _trayIcon;
+        private NativeMenuItem? _toggleMenuItem;
 
         public override void Initialize()
         {
@@ -47,6 +48,17 @@ namespace clicky_windows
 
                 // 4. Initialize Programmatic System Tray Icon
                 InitializeTrayIcon();
+
+                manager.PropertyChanged += (sender, e) =>
+                {
+                    if (e.PropertyName == nameof(CompanionManager.IsClickyCursorEnabled))
+                    {
+                        if (_toggleMenuItem != null)
+                        {
+                            _toggleMenuItem.Header = manager.IsClickyCursorEnabled ? "✓ Show Clicky Cursor" : "Show Clicky Cursor";
+                        }
+                    }
+                };
 
                 Microsoft.Win32.SystemEvents.PowerModeChanged += OnPowerModeChanged;
                 Microsoft.Win32.SystemEvents.SessionSwitch += OnSessionSwitch;
@@ -83,8 +95,8 @@ namespace clicky_windows
                 // Build Tray Menu
                 var menu = new NativeMenu();
 
-                var toggleItem = new NativeMenuItem("Show Clicky Cursor");
-                toggleItem.Click += (sender, args) =>
+                _toggleMenuItem = new NativeMenuItem(CompanionManager.Instance.IsClickyCursorEnabled ? "✓ Show Clicky Cursor" : "Show Clicky Cursor");
+                _toggleMenuItem.Click += (sender, args) =>
                 {
                     CompanionManager.Instance.IsClickyCursorEnabled = !CompanionManager.Instance.IsClickyCursorEnabled;
                 };
@@ -107,7 +119,7 @@ namespace clicky_windows
                     }
                 };
 
-                menu.Items.Add(toggleItem);
+                menu.Items.Add(_toggleMenuItem);
                 menu.Items.Add(settingsItem);
                 menu.Items.Add(separator);
                 menu.Items.Add(quitItem);
@@ -116,11 +128,16 @@ namespace clicky_windows
 
                 // Register TrayIcon with the application
                 var trayIcons = TrayIcon.GetIcons(Application.Current!);
+                if (trayIcons == null)
+                {
+                    trayIcons = new TrayIcons();
+                    TrayIcon.SetIcons(Application.Current!, trayIcons);
+                }
                 trayIcons.Add(_trayIcon);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️ Failed to initialize Tray Icon: {ex.Message}");
+                Console.WriteLine($"⚠️ Failed to initialize Tray Icon: {ex}");
             }
         }
 

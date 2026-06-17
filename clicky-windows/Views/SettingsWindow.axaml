@@ -1,78 +1,281 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        xmlns:local="using:clicky_windows"
         x:Class="clicky_windows.Views.SettingsWindow"
-        Title="Clicky Settings"
-        Width="320" Height="240"
-        WindowStartupLocation="Manual"
-        WindowDecorations="None"
-        Topmost="True"
-        Background="#18181B"
-        CornerRadius="12"
-        BorderThickness="1"
-        BorderBrush="#27272A"
-        ShowInTaskbar="False">
+        Title="Clicky Preferences"
+        Width="520" Height="580"
+        WindowStartupLocation="CenterScreen"
+        Background="#1C1C1E"
+        CornerRadius="16"
+        CanResize="False"
+        ExtendClientAreaToDecorationsHint="True"
+        ExtendClientAreaTitleBarHeightHint="40">
 
     <Window.Styles>
-        <Style Selector="Button">
-            <Setter Property="Background" Value="#27272A"/>
-            <Setter Property="Foreground" Value="#E4E4E7"/>
-            <Setter Property="BorderThickness" Value="0"/>
+        <!-- Apple Styling Rules -->
+        <Style Selector="TabControl">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="Padding" Value="0"/>
+        </Style>
+        <Style Selector="TabItem">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Foreground" Value="#8E8E93"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="Margin" Value="0,0,4,0"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="TabItem:pointerover /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#2C2C2E"/>
+            <Setter Property="Foreground" Value="#E5E5EA"/>
+        </Style>
+        <Style Selector="TabItem:selected /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="#3A3A3C"/>
+            <Setter Property="Foreground" Value="White"/>
+        </Style>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Foreground" Value="#AEAEB2"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,4"/>
+        </Style>
+        <Style Selector="TextBox">
+            <Setter Property="Background" Value="#2C2C2E"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#3A3A3C"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="SelectionBrush" Value="#0A84FF"/>
+        </Style>
+        <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+            <Setter Property="BorderBrush" Value="#0A84FF"/>
+            <Setter Property="Background" Value="#2C2C2E"/>
+        </Style>
+        <Style Selector="ComboBox">
+            <Setter Property="Background" Value="#2C2C2E"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="BorderBrush" Value="#3A3A3C"/>
+            <Setter Property="CornerRadius" Value="8"/>
             <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="HorizontalAlignment" Value="Stretch"/>
+        </Style>
+        <Style Selector="Button">
+            <Setter Property="Background" Value="#3A3A3C"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="FontWeight" Value="Medium"/>
             <Setter Property="Cursor" Value="Hand"/>
         </Style>
         <Style Selector="Button:hover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#3F3F46"/>
+            <Setter Property="Background" Value="#48484A"/>
             <Setter Property="Foreground" Value="White"/>
         </Style>
-        <Style Selector="ToggleButton">
-            <Setter Property="Background" Value="#27272A"/>
-            <Setter Property="Foreground" Value="#E4E4E7"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="10,6"/>
-            <Setter Property="CornerRadius" Value="6"/>
+        <Style Selector="Button.primary">
+            <Setter Property="Background" Value="#0A84FF"/>
+            <Setter Property="Foreground" Value="White"/>
         </Style>
-        <Style Selector="ToggleButton:checked /template/ ContentPresenter">
-            <Setter Property="Background" Value="#2563EB"/>
+        <Style Selector="Button.primary:hover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#2094FF"/>
             <Setter Property="Foreground" Value="White"/>
         </Style>
     </Window.Styles>
 
-    <Grid RowDefinitions="Auto,*,Auto" Margin="16">
-        <!-- Header -->
-        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
-            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                <Ellipse Name="StatusDot" Width="10" Height="10" Fill="#A1A1AA" VerticalAlignment="Center"/>
-                <TextBlock Text="Clicky" FontSize="14" FontWeight="SemiBold" Foreground="White" VerticalAlignment="Center"/>
+    <Grid RowDefinitions="Auto,*,Auto" Margin="20,40,20,20">
+        <!-- Header / Logo -->
+        <Grid Grid.Row="0" ColumnDefinitions="*,Auto" Margin="0,0,0,16">
+            <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="10">
+                <Border CornerRadius="8" Background="#0A84FF" Width="28" Height="28" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <Path Data="M 6,6 L 14,22 L 22,14 Z" Fill="White" Width="14" Height="14" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="Clicky Preferences" FontSize="15" FontWeight="Bold" Foreground="White"/>
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Ellipse Name="StatusDot" Width="8" Height="8" Fill="#30D158" VerticalAlignment="Center"/>
+                        <TextBlock Name="StatusText" Text="Active" FontSize="11" Foreground="#8E8E93"/>
+                    </StackPanel>
+                </StackPanel>
             </StackPanel>
-            <TextBlock Name="StatusText" Grid.Column="1" Text="Setup" FontSize="12" Foreground="#A1A1AA" VerticalAlignment="Center"/>
+            <TextBlock Text="v1.2 (Universal)" Grid.Column="1" FontSize="11" Foreground="#48484A" VerticalAlignment="Bottom"/>
         </Grid>
 
-        <!-- Content -->
-        <StackPanel Grid.Row="1" Spacing="12" Margin="0,10">
-            <TextBlock Text="Hold Ctrl+Alt to talk." FontSize="12" Foreground="#A1A1AA"/>
+        <!-- Main Body (Tab Control) -->
+        <TabControl Grid.Row="1">
+            
+            <!-- GENERAL TAB -->
+            <TabItem Header="General">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="16" Margin="4,16,4,4">
+                        <!-- Toggle Options -->
+                        <Border Background="#2C2C2E" CornerRadius="12" Padding="16" BorderBrush="#3A3A3C" BorderThickness="1">
+                            <StackPanel Spacing="14">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="Show Clicky Cursor" FontWeight="Medium" Foreground="White"/>
+                                        <TextBlock Text="Display the interactive companion next to the mouse pointer." FontSize="11" Foreground="#8E8E93"/>
+                                    </StackPanel>
+                                    <ToggleSwitch Name="ClickyCursorToggle" Grid.Column="1" IsChecked="True" OnContent="" OffContent="" Theme="{StaticResource {x:Type ToggleSwitch}}"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
 
-            <!-- Clicky Toggle -->
-            <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
-                <TextBlock Text="Show Clicky Cursor" Foreground="#E4E4E7" VerticalAlignment="Center"/>
-                <ToggleSwitch Name="ClickyCursorToggle" Grid.Column="1" IsChecked="True" OnContent="" OffContent="" Theme="{StaticResource {x:Type ToggleSwitch}}"/>
-            </Grid>
+                        <Border Background="#2C2C2E" CornerRadius="12" Padding="16" BorderBrush="#3A3A3C" BorderThickness="1">
+                            <StackPanel Spacing="8">
+                                <TextBlock Text="Instructions" FontWeight="Medium" Foreground="White"/>
+                                <TextBlock Text="• Press and hold Ctrl+Alt to speak." FontSize="12" Foreground="#AEAEB2"/>
+                                <TextBlock Text="• Release the keys to send transcript and display captures to the AI." FontSize="12" Foreground="#AEAEB2"/>
+                                <TextBlock Text="• Clicky will reply out loud and point out items on your display." FontSize="12" Foreground="#AEAEB2"/>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
 
-            <!-- Model Picker -->
-            <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
-                <TextBlock Text="AI Model" Foreground="#E4E4E7" VerticalAlignment="Center"/>
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
-                    <RadioButton Name="SonnetRadio" Content="Sonnet" GroupName="ModelGroup" IsChecked="True" Theme="{StaticResource {x:Type RadioButton}}"/>
-                    <RadioButton Name="OpusRadio" Content="Opus" GroupName="ModelGroup" Theme="{StaticResource {x:Type RadioButton}}"/>
-                </StackPanel>
-            </Grid>
-        </StackPanel>
+            <!-- AI PROVIDER TAB -->
+            <TabItem Header="AI Model">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="12" Margin="4,16,4,4">
+                        
+                        <StackPanel>
+                            <TextBlock Text="PRESET PROVIDER" Classes="label"/>
+                            <ComboBox Name="AiProviderCombo" />
+                        </StackPanel>
 
-        <!-- Footer -->
-        <Grid Grid.Row="2" ColumnDefinitions="*,Auto" Margin="0,12,0,0">
-            <Button Name="QuitButton" Grid.Column="0" Content="Quit Clicky" Click="OnQuitClick" Background="#3F1D1D" Foreground="#FCA5A5"/>
-            <Button Name="CloseButton" Grid.Column="1" Content="Close" Click="OnCloseClick"/>
+                        <StackPanel>
+                            <TextBlock Text="MODEL NAME" Classes="label"/>
+                            <TextBox Name="AiModelText" PlaceholderText="e.g. claude-3-5-sonnet-20241022 or llama3"/>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="ENDPOINT URL" Classes="label"/>
+                            <TextBox Name="AiEndpointText" PlaceholderText="https://api.anthropic.com/v1/messages"/>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="API KEY" Classes="label"/>
+                            <TextBox Name="AiApiKeyText" PasswordChar="●" PlaceholderText="Leave blank if using local model / proxy"/>
+                        </StackPanel>
+
+                        <!-- Advanced Configurations Expander -->
+                        <Expander Header="Advanced Configuration" Background="#2C2C2E" Foreground="White" BorderBrush="#3A3A3C" BorderThickness="1" CornerRadius="8">
+                            <StackPanel Spacing="12" Margin="0,10,0,0">
+                                
+                                <Grid ColumnDefinitions="*,*">
+                                    <StackPanel Grid.Column="0" Margin="0,0,6,0">
+                                        <TextBlock Text="API SCHEMA FORMAT" Classes="label"/>
+                                        <ComboBox Name="AiFormatCombo">
+                                            <ComboBoxItem Content="OpenAI"/>
+                                            <ComboBoxItem Content="Anthropic"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Margin="6,0,0,0">
+                                        <TextBlock Text="AUTHENTICATION TYPE" Classes="label"/>
+                                        <ComboBox Name="AiAuthCombo">
+                                            <ComboBoxItem Content="Bearer"/>
+                                            <ComboBoxItem Content="ApiKey"/>
+                                            <ComboBoxItem Content="None"/>
+                                        </ComboBox>
+                                    </StackPanel>
+                                </Grid>
+
+                                <StackPanel>
+                                    <TextBlock Text="CUSTOM HEADERS (JSON)" Classes="label"/>
+                                    <TextBox Name="AiCustomHeadersText" PlaceholderText="e.g. { &quot;X-Header&quot;: &quot;value&quot; }" Height="60" AcceptsReturn="True" TextWrapping="Wrap"/>
+                                </StackPanel>
+
+                                <Grid ColumnDefinitions="*,*">
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Text="SUPPORTS VISION" Classes="label"/>
+                                        <ToggleSwitch Name="AiVisionToggle" IsChecked="True" OnContent="" OffContent="" Theme="{StaticResource {x:Type ToggleSwitch}}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Text="SUPPORTS STREAMING" Classes="label"/>
+                                        <ToggleSwitch Name="AiStreamingToggle" IsChecked="False" OnContent="" OffContent="" Theme="{StaticResource {x:Type ToggleSwitch}}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Expander>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- VOICE & STT TAB -->
+            <TabItem Header="Voice (STT)">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="12" Margin="4,16,4,4">
+                        
+                        <StackPanel>
+                            <TextBlock Text="TRANSCRIBER PROVIDER" Classes="label"/>
+                            <ComboBox Name="SttProviderCombo">
+                                <ComboBoxItem Content="AssemblyAI"/>
+                                <ComboBoxItem Content="OpenAI Whisper"/>
+                                <ComboBoxItem Content="Custom / Local"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="ENDPOINT URL" Classes="label"/>
+                            <TextBox Name="SttEndpointText" PlaceholderText="e.g. https://api.openai.com/v1"/>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="API KEY" Classes="label"/>
+                            <TextBox Name="SttApiKeyText" PasswordChar="●" PlaceholderText="Enter your transcription provider key"/>
+                        </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- SPEECH & TTS TAB -->
+            <TabItem Header="Speech (TTS)">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Spacing="12" Margin="4,16,4,4">
+                        
+                        <StackPanel>
+                            <TextBlock Text="SPEECH SYNTHESIZER PROVIDER" Classes="label"/>
+                            <ComboBox Name="TtsProviderCombo">
+                                <ComboBoxItem Content="ElevenLabs"/>
+                                <ComboBoxItem Content="OpenAI Speech"/>
+                                <ComboBoxItem Content="Windows System Speech (Offline &amp; Free)"/>
+                            </ComboBox>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="VOICE ID / NAME" Classes="label"/>
+                            <TextBox Name="TtsVoiceIdText" PlaceholderText="e.g. cgSgspJ2msm6clMC924e or alloy"/>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="MODEL ID" Classes="label"/>
+                            <TextBox Name="TtsModelText" PlaceholderText="e.g. eleven_flash_v2_5 or tts-1"/>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="ENDPOINT URL" Classes="label"/>
+                            <TextBox Name="TtsEndpointText" PlaceholderText="e.g. https://api.elevenlabs.io/v1"/>
+                        </StackPanel>
+
+                        <StackPanel>
+                            <TextBlock Text="API KEY" Classes="label"/>
+                            <TextBox Name="TtsApiKeyText" PasswordChar="●" PlaceholderText="ElevenLabs / OpenAI key"/>
+                        </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+        </TabControl>
+
+        <!-- Footer Buttons -->
+        <Grid Grid.Row="2" ColumnDefinitions="*,Auto,Auto" Margin="0,16,0,0">
+            <Button Name="QuitButton" Grid.Column="0" Content="Quit Clicky" Background="#FF453A" Foreground="White" VerticalAlignment="Center"/>
+            <Button Name="CancelButton" Grid.Column="1" Content="Cancel" Margin="0,0,8,0" VerticalAlignment="Center"/>
+            <Button Name="SaveButton" Grid.Column="2" Content="Apply Settings" Classes="primary" VerticalAlignment="Center"/>
         </Grid>
     </Grid>
 </Window>
