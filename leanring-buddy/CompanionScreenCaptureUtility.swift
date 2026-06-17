@@ -69,6 +69,13 @@ enum CompanionScreenCaptureUtility {
 
         var capturedScreens: [CompanionScreenCapture] = []
 
+        // Optimization: SCStreamConfiguration is an NSObject reference type.
+        // We reuse a single instance across all displays to avoid repeated heap
+        // allocation overhead. This is safe because the async capture sequence
+        // operates strictly sequentially without overlapping mutations.
+        let configuration = SCStreamConfiguration()
+        let maxDimension = 1280
+
         for (displayIndex, display) in sortedDisplays.enumerated() {
             // Use NSScreen.frame (AppKit coordinates, bottom-left origin) so
             // displayFrame is in the same coordinate system as NSEvent.mouseLocation
@@ -80,8 +87,6 @@ enum CompanionScreenCaptureUtility {
 
             let filter = SCContentFilter(display: display, excludingWindows: ownAppWindows)
 
-            let configuration = SCStreamConfiguration()
-            let maxDimension = 1280
             let aspectRatio = CGFloat(display.width) / CGFloat(display.height)
             if display.width >= display.height {
                 configuration.width = maxDimension
