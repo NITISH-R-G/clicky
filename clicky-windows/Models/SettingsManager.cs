@@ -19,7 +19,12 @@ namespace clicky_windows.Models
 
         public string SttProvider { get; set; } = "AssemblyAI";
         public string SttApiKey { get; set; } = "";
-        public string SttEndpoint { get; set; } = "https://api.assemblyai.com/v2";
+        // Blank means "direct AssemblyAI mode using SttApiKey" — AssemblyAIClient
+        // resolves this to the canonical streaming.assemblyai.com/v3/token endpoint.
+        // Set this to a Clicky Cloudflare Worker URL instead to keep the key
+        // server-side (worker mode). Never set it to api.assemblyai.com/v2 — that
+        // host has no /transcribe-token route and was the old broken default.
+        public string SttEndpoint { get; set; } = "";
 
         public string TtsProvider { get; set; } = "ElevenLabs";
         public string TtsApiKey { get; set; } = "";

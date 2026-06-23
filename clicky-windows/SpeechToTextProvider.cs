@@ -41,13 +41,12 @@ namespace clicky_windows
 
             if (provider == "assemblyai")
             {
-                // Connect to AssemblyAI streaming ws
-                string workerUrl = settings.SttEndpoint;
-                if (string.IsNullOrWhiteSpace(workerUrl) || workerUrl.Contains("your-worker-name"))
-                {
-                    workerUrl = CompanionManager.Instance.WorkerBaseURL;
-                }
-                await _assemblyClient.StartSessionAsync(workerUrl, new List<string>());
+                // AssemblyAIClient.ResolveTokenRequest decides worker mode vs direct
+                // mode from the endpoint + key, so pass both settings through verbatim.
+                // A blank endpoint with a key is valid (direct mode); a worker URL
+                // needs no key. If neither is set, the resolver throws a clear error
+                // surfaced via ErrorOccurred rather than hitting a placeholder host.
+                await _assemblyClient.StartSessionAsync(settings.SttEndpoint, settings.SttApiKey, new List<string>());
             }
             else
             {
