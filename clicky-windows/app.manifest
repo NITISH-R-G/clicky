@@ -13,6 +13,14 @@
 
       <!-- Windows 10 -->
       <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}" />
+
+      <!-- Per-Monitor v2 DPI awareness. Without this the process can be launched
+           DPI-unaware/DPI-system, which virtualizes GDI coordinates so MONITORINFO
+           and GetCursorPos disagree with Avalonia Screen.Bounds on multi-DPI setups.
+           The overlay's coordinate math (CoordinateMath) assumes real device pixels,
+           which requires PerMonitorV2. <dpiAware>true</dpiAware> is the older fallback. -->
+      <dpiAwareness>PerMonitorV2, PerMonitor</dpiAwareness>
+      <dpiAware>true</dpiAware>
     </application>
   </compatibility>
 </assembly>

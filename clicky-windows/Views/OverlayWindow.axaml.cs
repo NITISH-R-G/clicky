@@ -128,15 +128,19 @@ namespace clicky_windows.Views
 
             Dispatcher.UIThread.Post(() =>
             {
-                // Translate global pixel coords to screen-local bounds
-                double screenPixelX = _targetScreen.Bounds.X * _targetScreen.Scaling;
-                double screenPixelY = _targetScreen.Bounds.Y * _targetScreen.Scaling;
+                // Translate global device-pixel coords to screen-local DIPs. Screen.Bounds
+                // is a PixelRect (device px), and instruction coords are device px (CompanionManager
+                // added the monitor's MONITORINFO origin to them), so subtract the origin in device
+                // px and divide by Scaling exactly once. See CoordinateMath.
+                double screenOriginDeviceX = _targetScreen.Bounds.X;
+                double screenOriginDeviceY = _targetScreen.Bounds.Y;
+                double scaling = _targetScreen.Scaling;
 
-                double lx1 = (instruction.X1 - screenPixelX) / _targetScreen.Scaling;
-                double ly1 = (instruction.Y1 - screenPixelY) / _targetScreen.Scaling;
-                double lx2 = (instruction.X2 - screenPixelX) / _targetScreen.Scaling;
-                double ly2 = (instruction.Y2 - screenPixelY) / _targetScreen.Scaling;
-                double lRadius = instruction.Radius / _targetScreen.Scaling;
+                double lx1 = CoordinateMath.ToLocalDip(instruction.X1, screenOriginDeviceX, scaling);
+                double ly1 = CoordinateMath.ToLocalDip(instruction.Y1, screenOriginDeviceY, scaling);
+                double lx2 = CoordinateMath.ToLocalDip(instruction.X2, screenOriginDeviceX, scaling);
+                double ly2 = CoordinateMath.ToLocalDip(instruction.Y2, screenOriginDeviceY, scaling);
+                double lRadius = instruction.Radius / scaling;
 
                 Control? shapeControl = null;
 
@@ -466,12 +470,14 @@ namespace clicky_windows.Views
 
             if (manager.PointX.HasValue && manager.PointY.HasValue)
             {
-                // Flight/Pointing Mode: fly to target coordinate
-                // Map global coords to screen-local coords (doing the subtraction in pixel space)
-                double screenPixelX = _targetScreen.Bounds.X * _targetScreen.Scaling;
-                double screenPixelY = _targetScreen.Bounds.Y * _targetScreen.Scaling;
-                targetX = (manager.PointX.Value - screenPixelX) / _targetScreen.Scaling;
-                targetY = (manager.PointY.Value - screenPixelY) / _targetScreen.Scaling;
+                // Flight/Pointing Mode: fly to target coordinate.
+                // manager.PointX/Y are global device pixels (CompanionManager added the
+                // monitor's MONITORINFO origin). Convert to local DIPs via CoordinateMath.
+                double screenOriginDeviceX = _targetScreen.Bounds.X;
+                double screenOriginDeviceY = _targetScreen.Bounds.Y;
+                double scaling = _targetScreen.Scaling;
+                targetX = CoordinateMath.ToLocalDip(manager.PointX.Value, screenOriginDeviceX, scaling);
+                targetY = CoordinateMath.ToLocalDip(manager.PointY.Value, screenOriginDeviceY, scaling);
 
                 // Show speech bubble
                 SpeechBubble.IsVisible = !string.IsNullOrWhiteSpace(manager.PointLabel);
@@ -479,12 +485,14 @@ namespace clicky_windows.Views
             }
             else
             {
-                // Mouse-following Mode (doing the subtraction in pixel space)
+                // Mouse-following Mode. GetCursorPos returns device pixels; Screen.Bounds
+                // is device pixels; subtract in device px then divide by Scaling once.
                 GetCursorPos(out var mousePoint);
-                double screenPixelX = _targetScreen.Bounds.X * _targetScreen.Scaling;
-                double screenPixelY = _targetScreen.Bounds.Y * _targetScreen.Scaling;
-                targetX = (mousePoint.X - screenPixelX) / _targetScreen.Scaling;
-                targetY = (mousePoint.Y - screenPixelY) / _targetScreen.Scaling;
+                double screenOriginDeviceX = _targetScreen.Bounds.X;
+                double screenOriginDeviceY = _targetScreen.Bounds.Y;
+                double scaling = _targetScreen.Scaling;
+                targetX = CoordinateMath.ToLocalDip(mousePoint.X, screenOriginDeviceX, scaling);
+                targetY = CoordinateMath.ToLocalDip(mousePoint.Y, screenOriginDeviceY, scaling);
 
                 // Adjust slightly so it floats next to the pointer
                 targetX += 16;
