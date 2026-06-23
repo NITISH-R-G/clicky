@@ -27,12 +27,14 @@ The two v1 P0s ("cursor never appears" and "locked to worker endpoints") were **
 - **T2.2 (SPEC-04)** Refactor `CompanionManager.OnFinalTranscriptReceived` to consume an `IAsyncEnumerable<TeachingStep>` so speech can start before the full response.
 - **T2.3 (SPEC-04)** Update the default model id (or make the preset the single source of truth). *AC4.*
 
-## Epic 3 — Screen-capture + coordinate correctness (P1)
-- **T3.1 (SPEC-03)** Downscale captures to ≤1280px; set JPEG quality. *AC1.*
-- **T3.2 (SPEC-03)** Exclude own overlay/settings windows from capture (hide-during-capture or window-rect crop). *AC2.*
-- **T3.3 (SPEC-03)** Add per-monitor v2 DPI awareness to `app.manifest`. *AC3.*
-- **T3.4 (SPEC-03)** try/finally all GDI handle releases. *AC4.*
-- **T3.5 (SPEC-07)** Standardize pointing/drawing on Win32 device pixels; stop reading `Screen.Bounds` in the overlay. *AC1-2.*
+## Epic 3 — Screen-capture + coordinate correctness (P1) ✅ DONE (commits 4470f17, a47e386)
+- **T3.1 (SPEC-03)** ✅ Downscale captures to ≤1280px (longest side, aspect preserved); JPEG quality 85. *AC1 met.*
+- **T3.2 (SPEC-03)** ✅ Own-process visible top-level windows blanked out of each capture via `EnumWindows` + `GetWindowRect` + `GetWindowThreadProcessId` (self-contained in `ScreenCapturer`, no overlay hide-during-capture, no flicker). *AC2 met.*
+- **T3.3 (SPEC-03)** ✅ `app.manifest` declares `PerMonitorV2, PerMonitor` DPI awareness. *AC3 met.*
+- **T3.4 (SPEC-03)** ✅ All GDI handle teardown in try/finally; dropped 3 unused P/Invoke imports. *AC4 met.*
+- **T3.5 (SPEC-07)** ✅ `CoordinateMath.ToLocalDip` centralizes device-px→DIP conversion; removed the `Bounds.X * Scaling` double-scaling in all three overlay call sites. *AC1-2 met (regression test asserts the old negative-coordinate bug is gone).*
+
+> Verification: 18 new tests (6 coordinate + 12 scaling); 43 total green in Debug + Release; 0-warnings/0-errors. Live multi-DPI/multi-monitor manual check remains a reviewer step (no such hardware in this environment).
 
 ## Epic 4 — Pipeline threading, cancellation, lifecycle (P1)
 - **T4.1 (SPEC-02)** UI-thread marshal helper; route all `CompanionManager` observable mutations through it. *AC1.*

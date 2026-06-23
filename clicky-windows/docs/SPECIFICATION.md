@@ -17,9 +17,11 @@ Every claim below was checked by tracing the **current** source, not by inferenc
 | SPEC-10 (dead scaffolding) | ✅ Closed | Removed `MainWindow*`, `ViewModels/*`, `ViewLocator`, `App.axaml` registration, unused `CommunityToolkit.Mvvm`. |
 | SPEC-01 (AssemblyAI token) | ✅ Closed | `AssemblyAIClient.ResolveTokenRequest` splits worker mode (POST `{worker}/transcribe-token`) from direct mode (GET `streaming.assemblyai.com/v3/token` + key). Default `SttEndpoint` blanked; unconfigured state throws a clear error instead of 404'ing. 14 unit tests cover both modes. |
 | SPEC-05 (AssemblyAI JSON parsing) | ✅ Closed | `HandleMessage` reads all turn fields as optional (`ReadOptionalString/Boolean/Int32`); `SessionBegins`/partial envelopes no longer throw. Stop ordering fixed (close before cancel) so the final turn isn't dropped. |
-| SPEC-02..SPEC-04, SPEC-06..SPEC-07, SPEC-11..SPEC-14 | ⏳ Open | |
+| SPEC-07 (pointing coordinate drift) | ✅ Closed | `CoordinateMath.ToLocalDip` subtracts the monitor origin in device px and divides by Scaling exactly once; removed the old `Bounds.X * Scaling` double-scaling. `app.manifest` now declares PerMonitorV2 DPI awareness. A regression test proves the old code yielded a negative coordinate where the fix yields the correct positive value. |
+| SPEC-03 (capture quality/exclusion/DPI) | ✅ Closed | Captures downscale to ≤1280px (quality 85 JPEG) with aspect preserved; own-process windows blanked out of each capture via `EnumWindows`; all GDI handle teardown moved to try/finally. 12 scaling tests added. |
+| SPEC-02, SPEC-04, SPEC-06, SPEC-11..SPEC-14 | ⏳ Open | |
 
-A test project (`clicky-windows-tests`, xUnit) was added with 25 passing tests covering `ProviderRegistry`, `ClickySettings` serialization, and the AssemblyAI token resolver; a `clicky-windows.sln` ties both projects together.
+The test project (`clicky-windows-tests`, xUnit) now has **43 passing tests** covering `ProviderRegistry`, `ClickySettings` serialization, the AssemblyAI token resolver, the overlay coordinate math, and the capture scaling math; a `clicky-windows.sln` ties both projects together.
 
 ## Retractions from the v1 audit
 
