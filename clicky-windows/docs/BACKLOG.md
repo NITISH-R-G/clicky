@@ -36,10 +36,12 @@ The two v1 P0s ("cursor never appears" and "locked to worker endpoints") were **
 
 > Verification: 18 new tests (6 coordinate + 12 scaling); 43 total green in Debug + Release; 0-warnings/0-errors. Live multi-DPI/multi-monitor manual check remains a reviewer step (no such hardware in this environment).
 
-## Epic 4 — Pipeline threading, cancellation, lifecycle (P1)
-- **T4.1 (SPEC-02)** UI-thread marshal helper; route all `CompanionManager` observable mutations through it. *AC1.*
-- **T4.2 (SPEC-02)** Wire `Stop()` and hotkey-restart to cancel `_pipelineCts`. *AC2.*
-- **T4.3 (SPEC-02)** Marshal keyboard-hook install/uninstall to the UI thread; verify single hook across suspend/lock cycles. *AC3.*
+## Epic 4 — Pipeline threading, cancellation, lifecycle (P1) ✅ DONE (commit f1f1a3d)
+- **T4.1 (SPEC-02)** ✅ `CompanionManager.OnPropertyChanged` marshals to `Dispatcher.UIThread` (inline when already there), so every `SetField` caller — including the pipeline's `Task.Run` — is safe from any thread. *AC1 met.*
+- **T4.2 (SPEC-02)** ✅ `Stop()` cancels and disposes `_pipelineCts` and resets `VoiceState`/`PointX`/`PointY`/`PointLabel`, so suspend/lock/shutdown no longer leaves a screenshot→AI→TTS response running. *AC2 met.*
+- **T4.3 (SPEC-02)** ✅ `GlobalHotkey.Start/Stop` marshal to the UI thread and guard against double-install, so the `WH_KEYBOARD_LL` hook always lives on the message-pump thread across suspend/resume and lock/unlock (which fire on a system thread via `SystemEvents`). *AC3 met.*
+
+> Verification: 43 tests green (Debug), 0 warnings/0 errors. Concurrency/hook behavior under suspend/lock is inherently runtime — a manual suspend/resume + lock/unlock cycle is a reviewer step (no such lifecycle events in this environment).
 
 ## Epic 5 — Replace PowerShell TTS + observability (P1→P2)
 - **T5.1 (SPEC-06)** In-process System.Speech synth (or NAudio + SAPI voice); remove the `powershell` process spawn. *AC1-3.*

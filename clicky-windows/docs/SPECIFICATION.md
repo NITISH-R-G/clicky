@@ -19,7 +19,8 @@ Every claim below was checked by tracing the **current** source, not by inferenc
 | SPEC-05 (AssemblyAI JSON parsing) | ✅ Closed | `HandleMessage` reads all turn fields as optional (`ReadOptionalString/Boolean/Int32`); `SessionBegins`/partial envelopes no longer throw. Stop ordering fixed (close before cancel) so the final turn isn't dropped. |
 | SPEC-07 (pointing coordinate drift) | ✅ Closed | `CoordinateMath.ToLocalDip` subtracts the monitor origin in device px and divides by Scaling exactly once; removed the old `Bounds.X * Scaling` double-scaling. `app.manifest` now declares PerMonitorV2 DPI awareness. A regression test proves the old code yielded a negative coordinate where the fix yields the correct positive value. |
 | SPEC-03 (capture quality/exclusion/DPI) | ✅ Closed | Captures downscale to ≤1280px (quality 85 JPEG) with aspect preserved; own-process windows blanked out of each capture via `EnumWindows`; all GDI handle teardown moved to try/finally. 12 scaling tests added. |
-| SPEC-02, SPEC-04, SPEC-06, SPEC-11..SPEC-14 | ⏳ Open | |
+| SPEC-02 (threading/cancellation) | ✅ Closed | `CompanionManager.OnPropertyChanged` marshals to `Dispatcher.UIThread` (all `SetField` callers safe from any thread); `Stop()` cancels/disposes `_pipelineCts` and resets `VoiceState`/`Point*`; `GlobalHotkey.Start/Stop` marshal to the UI thread and guard against double-install so the `WH_KEYBOARD_LL` hook always lives on the message-pump thread (safe across suspend/lock cycles). |
+| SPEC-04, SPEC-06, SPEC-11..SPEC-14 | ⏳ Open | |
 
 The test project (`clicky-windows-tests`, xUnit) now has **43 passing tests** covering `ProviderRegistry`, `ClickySettings` serialization, the AssemblyAI token resolver, the overlay coordinate math, and the capture scaling math; a `clicky-windows.sln` ties both projects together.
 
