@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Avalonia.Threading;
 
 namespace clicky_windows
 {
@@ -30,8 +31,51 @@ namespace clicky_windows
             _proc = HookCallback;
         }
 
+        /// <summary>
+        /// Installs the low-level keyboard hook on the UI thread. WH_KEYBOARD_LL
+        /// must be installed AND its callbacks delivered on the thread that owns the
+        /// message pump (the UI thread). Start()/Stop() are also called from
+        /// Microsoft.Win32.SystemEvents power/session callbacks, which fire on a
+        /// system thread -- so we marshal to the UI thread regardless of caller.
+        /// Marshalling also guarantees the single-hook invariant (_hookId) is never
+        /// observed/torn down concurrently from two threads.
+        /// </summary>
         public void Start()
         {
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                StartOnUiThread();
+            }
+            else
+            {
+                Dispatcher.UIThread.Post(StartOnUiThread);
+            }
+        }
+
+        /// <summary>
+        /// Uninstalls the hook. See Start() for why this marshals to the UI thread.
+        /// Safe to call repeatedly / when no hook is installed.
+        /// </summary>
+        public void Stop()
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                StopOnUiThread();
+            }
+            else
+            {
+                Dispatcher.UIThread.Post(StopOnUiThread);
+            }
+        }
+
+        private void StartOnUiThread()
+        {
+            // Guard against a double-install if Start() is called twice without a
+            // Stop() in between (e.g. suspend->resume while already running).
+            if (_hookId != IntPtr.Zero)
+            {
+                return;
+            }
             _hookId = SetHook(_proc);
             if (_hookId == IntPtr.Zero)
             {
@@ -44,7 +88,7 @@ namespace clicky_windows
             }
         }
 
-        public void Stop()
+        private void StopOnUiThread()
         {
             if (_hookId != IntPtr.Zero)
             {

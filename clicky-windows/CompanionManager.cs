@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Avalonia.Threading;
 using clicky_windows.Models;
 using System.Threading.Tasks;
 
@@ -146,9 +147,46 @@ namespace clicky_windows
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
+        /// <summary>
+        /// Raises PropertyChanged on the UI thread. OverlayWindow binds to these
+        /// properties from the UI thread (DispatcherTimer tick + PropertyChanged
+        /// handler), but several mutations happen from the pipeline's Task.Run
+        /// (OnFinalTranscriptReceived sets VoiceState/PointX/PointY/... from a
+        /// thread-pool thread). Routing every notification through the dispatcher
+        /// makes SetField safe to call from any thread without per-site marshalling.
+        /// PropertyChanged?.Invoke(...) is cheap when no handlers need switching.
+        /// </summary>
         protected void OnPropertyChanged([CallerMemberName] string? propertyName = null)
         {
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            var handler = PropertyChanged;
+            if (handler == null) return;
+
+            // Avoid the dispatcher hop entirely when already on the UI thread, which is
+            // the common case (hotkey callbacks, UI-driven settings changes).
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                handler(this, new PropertyChangedEventArgs(propertyName));
+            }
+            else
+            {
+                Dispatcher.UIThread.Post(() => handler(this, new PropertyChangedEventArgs(propertyName)));
+            }
+        }
+
+        /// <summary>
+        /// Runs an action on the UI thread, blocking if already there. Used for the
+        /// few direct side-effect calls (not property sets) that must touch UI state.
+        /// </summary>
+        protected void RunOnUi(Action action)
+        {
+            if (Dispatcher.UIThread.CheckAccess())
+            {
+                action();
+            }
+            else
+            {
+                Dispatcher.UIThread.Post(action);
+            }
         }
 
         protected bool SetField<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
@@ -217,9 +255,31 @@ namespace clicky_windows
         public void Stop()
         {
             Console.WriteLine("🔑 Clicky stop on Windows");
+
+            // Cancel any in-flight response pipeline (screenshot -> AI -> TTS) so a
+            // suspend/lock or shutdown doesn't leave a response running in the
+            // background. Previously Stop() only tore down the hotkey/audio/TTS,
+            // leaving the pipeline Task.Run running until it finished on its own.
+            // Cancel before disposing so pipeline code observing cts.IsCancellationRequested
+            // sees the cancellation, then dispose to release the CTS itself.
+            var pipelineCts = _pipelineCts;
+            _pipelineCts = null;
+            if (pipelineCts != null)
+            {
+                pipelineCts.Cancel();
+                pipelineCts.Dispose();
+            }
+
             _hotkey.Stop();
             _audioRecorder.Stop();
             _ttsProvider.StopPlayback();
+
+            // Reset visible state so the overlay doesn't show a stale
+            // Listening/Processing/Responding indicator after teardown.
+            VoiceState = CompanionVoiceState.Idle;
+            PointX = null;
+            PointY = null;
+            PointLabel = null;
         }
 
         private void OnHotkeyPressed()
