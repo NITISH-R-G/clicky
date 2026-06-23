@@ -6,3 +6,11 @@ build/
 releases/
 .claude/
 coding-plans/
+
+# .NET build output and intermediate files
+**/bin/
+**/obj/
+*.user
+*.suo
+.vs/
+*.cache
