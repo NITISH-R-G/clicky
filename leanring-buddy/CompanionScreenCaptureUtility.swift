@@ -69,6 +69,9 @@ enum CompanionScreenCaptureUtility {
 
         var capturedScreens: [CompanionScreenCapture] = []
 
+        let configuration = SCStreamConfiguration()
+        let maxDimension = 1280
+
         for (displayIndex, display) in sortedDisplays.enumerated() {
             // Use NSScreen.frame (AppKit coordinates, bottom-left origin) so
             // displayFrame is in the same coordinate system as NSEvent.mouseLocation
@@ -80,8 +83,6 @@ enum CompanionScreenCaptureUtility {
 
             let filter = SCContentFilter(display: display, excludingWindows: ownAppWindows)
 
-            let configuration = SCStreamConfiguration()
-            let maxDimension = 1280
             let aspectRatio = CGFloat(display.width) / CGFloat(display.height)
             if display.width >= display.height {
                 configuration.width = maxDimension
