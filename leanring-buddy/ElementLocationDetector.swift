@@ -122,7 +122,7 @@ class ElementLocationDetector {
 
     /// Picks the Anthropic-recommended Computer Use resolution whose aspect ratio
     /// is closest to the actual display, minimizing image distortion.
-    private func bestComputerUseResolution(
+    func bestComputerUseResolution(
         forDisplayWidth displayWidth: Int,
         displayHeight: Int
     ) -> (width: Int, height: Int) {
