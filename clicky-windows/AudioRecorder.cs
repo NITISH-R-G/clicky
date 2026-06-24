@@ -19,20 +19,25 @@ namespace clicky_windows
 
             try
             {
+                // Use device index 0 (the default capture device). If no mic is present
+                // or the default device is unavailable, StartRecording throws here and we
+                // log the full exception -- this is the most likely cause of the waveform
+                // dying instantly on hotkey press.
                 _waveIn = new WaveInEvent
                 {
-                    WaveFormat = new WaveFormat(16000, 16, 1) // 16kHz, 16-bit, mono PCM
+                    WaveFormat = new WaveFormat(16000, 16, 1), // 16kHz, 16-bit, mono PCM
+                    DeviceNumber = 0
                 };
 
                 _waveIn.DataAvailable += OnDataAvailable;
                 _waveIn.RecordingStopped += OnRecordingStopped;
                 _waveIn.StartRecording();
                 IsRecording = true;
-                Console.WriteLine("🎙️ Microphones recording started");
+                Logger.Info("AudioRecorder: recording started on device 0 (default)");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️ Failed to start audio recording: {ex.Message}");
+                Logger.Error("AudioRecorder: StartRecording threw (mic device unavailable?)", ex);
                 RecordingStopped?.Invoke(ex);
             }
         }
@@ -50,11 +55,11 @@ namespace clicky_windows
                 _waveIn = null;
                 IsRecording = false;
                 PowerLevelChanged?.Invoke(0);
-                Console.WriteLine("🎙️ Microphone recording stopped");
+                Logger.Info("AudioRecorder: recording stopped normally");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️ Failed to stop audio recording: {ex.Message}");
+                Logger.Error("AudioRecorder: Stop threw", ex);
             }
         }
 

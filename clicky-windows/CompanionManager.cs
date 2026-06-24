@@ -28,7 +28,18 @@ namespace clicky_windows
         public CompanionVoiceState VoiceState
         {
             get => _voiceState;
-            set => SetField(ref _voiceState, value);
+            set
+            {
+                // State transitions are the highest-signal diagnostic for the
+                // "waveform dies instantly" symptom: the waveform is visible only
+                // in Listening/Processing, so logging every transition pinpoints
+                // which code path killed it.
+                if (_voiceState != value)
+                {
+                    Logger.Info($"VoiceState: {_voiceState} -> {value}");
+                }
+                SetField(ref _voiceState, value);
+            }
         }
 
         private string? _lastTranscript;
@@ -217,8 +228,16 @@ namespace clicky_windows
             {
                 if (ex != null)
                 {
-                    Console.WriteLine($"🎙️ Audio recording stopped with error: {ex.Message}");
+                    // High-signal diagnostic: NAudio fires this asynchronously when the
+                    // mic device fails to open (no mic, permission denied, device busy).
+                    // This is the most likely cause of the waveform dying instantly on
+                    // hotkey press, so log it with full detail before resetting state.
+                    Logger.Error("Audio recording stopped with error (this resets VoiceState to Idle and kills the waveform)", ex);
                     VoiceState = CompanionVoiceState.Idle;
+                }
+                else
+                {
+                    Logger.Info("Audio recording stopped normally");
                 }
             };
 
@@ -235,14 +254,17 @@ namespace clicky_windows
             _sttProvider.FinalTranscriptReady += OnFinalTranscriptReceived;
             _sttProvider.ErrorOccurred += ex =>
             {
-                Console.WriteLine($"Transcription Error: {ex.Message}");
+                // High-signal diagnostic: a failure here (bad AssemblyAI key, network,
+                // token endpoint) means no transcript -> no AI response -> "nothing
+                // happens". Log the full exception before resetting state.
+                Logger.Error("STT provider error (transcription failed, resetting to Idle)", ex);
                 VoiceState = CompanionVoiceState.Idle;
             };
         }
 
         public void Start()
         {
-            Console.WriteLine("🔑 Clicky start on Windows");
+            Logger.Info("CompanionManager.Start() — installing hotkey + showing overlay");
             _hotkey.Start();
             UpdateOverlayVisibility();
         }
@@ -254,7 +276,7 @@ namespace clicky_windows
 
         public void Stop()
         {
-            Console.WriteLine("🔑 Clicky stop on Windows");
+            Logger.Info("CompanionManager.Stop() — cancelling pipeline, tearing down hotkey/audio/TTS");
 
             // Cancel any in-flight response pipeline (screenshot -> AI -> TTS) so a
             // suspend/lock or shutdown doesn't leave a response running in the
@@ -284,7 +306,7 @@ namespace clicky_windows
 
         private void OnHotkeyPressed()
         {
-            Console.WriteLine("⌨️ Hotkey Pressed (Ctrl+Alt) - Starting recording");
+            Logger.Info("Hotkey Pressed (Ctrl+Alt) — starting recording + STT session");
             _pipelineCts?.Cancel();
             _pipelineCts = new CancellationTokenSource();
 
@@ -299,29 +321,38 @@ namespace clicky_windows
 
             _audioRecorder.Start();
 
-            // Connect to STT session
+            // Connect to STT session. If this throws (bad key, token endpoint down,
+            // network), it logs and the manager stays in Listening until release.
             Task.Run(async () =>
             {
                 try
                 {
                     await _sttProvider.StartSessionAsync();
+                    Logger.Info("STT session started");
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Failed to start STT session: {ex.Message}");
+                    Logger.Error("Failed to start STT session", ex);
                 }
             });
         }
 
         private void OnHotkeyReleased()
         {
-            Console.WriteLine("⌨️ Hotkey Released (Ctrl+Alt) - Finalizing recording");
+            Logger.Info("Hotkey Released — stopping recording, finalizing transcript");
             _audioRecorder.Stop();
             VoiceState = CompanionVoiceState.Processing;
 
             Task.Run(async () =>
             {
-                await _sttProvider.StopSessionAsync();
+                try
+                {
+                    await _sttProvider.StopSessionAsync();
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Failed to stop STT session", ex);
+                }
             });
         }
 
@@ -329,12 +360,12 @@ namespace clicky_windows
         {
             if (string.IsNullOrWhiteSpace(transcript))
             {
-                Console.WriteLine("🗣️ Empty transcript received. Returning to idle.");
+                Logger.Warn("Empty transcript received — returning to idle (no speech detected, or STT failed to return text)");
                 VoiceState = CompanionVoiceState.Idle;
                 return;
             }
 
-            Console.WriteLine($"🗣️ Final transcript: \"{transcript}\"");
+            Logger.Info($"Final transcript received: \"{transcript}\"");
             LastTranscript = transcript;
 
             var cts = _pipelineCts;
@@ -410,7 +441,7 @@ always structure your response as a natural teaching sequence. speak a statement
 
                     // 3. Parse and execute synchronized timeline
                     var steps = ParseTeachingTimeline(response);
-                    Console.WriteLine($"🤖 AI response parsed into {steps.Count} teaching steps.");
+                    Logger.Info($"AI response parsed into {steps.Count} teaching steps");
 
                     // Add history
                     // Extract clean spoken text for history (no tags)
@@ -499,7 +530,10 @@ always structure your response as a natural teaching sequence. speak a statement
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"⚠️ Response pipeline error: {ex.Message}");
+                    // High-signal diagnostic: this is where AI/TTS failures surface
+                    // (bad provider key, network, vision not supported, etc.). Log the
+                    // full exception so the cause is in clicky.log, not just the message.
+                    Logger.Error("Response pipeline error (screenshot -> AI -> TTS failed)", ex);
                 }
                 finally
                 {
