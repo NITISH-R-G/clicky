@@ -15,6 +15,10 @@ namespace clicky_windows_tests
     /// </summary>
     public class AssemblyAiTokenResolutionTests
     {
+        // Direct-mode token URL includes the expires_in_seconds query param that
+        // AssemblyAI's v3/token endpoint requires (a bare GET returns HTTP 422).
+        private const string ExpectedDirectTokenUrl = "https://streaming.assemblyai.com/v3/token?expires_in_seconds=480";
+
         [Fact]
         public void BlankEndpoint_WithKey_ResolvesToDirectTokenEndpointWithKey()
         {
@@ -22,9 +26,21 @@ namespace clicky_windows_tests
                 configuredEndpoint: "",
                 assemblyAiApiKey: "aai-test-key");
 
-            Assert.Equal("https://streaming.assemblyai.com/v3/token", request.Url);
+            Assert.Equal(ExpectedDirectTokenUrl, request.Url);
             Assert.Equal(HttpMethod.Get, request.Method);
             Assert.Equal("aai-test-key", request.AuthorizationHeader);
+        }
+
+        [Fact]
+        public void DirectTokenUrl_IncludesRequiredExpiresInSeconds()
+        {
+            // Regression guard: the v3/token endpoint rejects a bare GET with 422
+            // "missing expires_in_seconds". Direct mode MUST append the query param.
+            var request = AssemblyAIClient.ResolveTokenRequest(
+                configuredEndpoint: "",
+                assemblyAiApiKey: "aai-key");
+
+            Assert.Contains("expires_in_seconds=", request.Url);
         }
 
         [Theory]
@@ -85,9 +101,10 @@ namespace clicky_windows_tests
         {
             // Even if someone pastes an AssemblyAI host into the endpoint, it must
             // not be treated as a worker (which would hit /transcribe-token and 404).
+            // It resolves to direct mode, which includes the required expires_in_seconds.
             var request = AssemblyAIClient.ResolveTokenRequest(endpoint, "real-key");
 
-            Assert.Equal("https://streaming.assemblyai.com/v3/token", request.Url);
+            Assert.Equal(ExpectedDirectTokenUrl, request.Url);
             Assert.Equal(HttpMethod.Get, request.Method);
             Assert.Equal("real-key", request.AuthorizationHeader);
         }
@@ -100,7 +117,7 @@ namespace clicky_windows_tests
         {
             var request = AssemblyAIClient.ResolveTokenRequest(endpoint, "real-key");
 
-            Assert.Equal("https://streaming.assemblyai.com/v3/token", request.Url);
+            Assert.Equal(ExpectedDirectTokenUrl, request.Url);
             Assert.Equal("real-key", request.AuthorizationHeader);
         }
 

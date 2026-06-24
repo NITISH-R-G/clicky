@@ -33,6 +33,12 @@ namespace clicky_windows
         // /transcribe-token route proxies to this same upstream endpoint.
         private const string DirectTokenEndpoint = "https://streaming.assemblyai.com/v3/token";
 
+        // Token lifetime requested from AssemblyAI. The v3/token endpoint REQUIRES
+        // an expires_in_seconds query param (a bare GET returns HTTP 422 "Field
+        // required"). 480s matches the Cloudflare Worker's /transcribe-token route,
+        // which appends this same value, so worker and direct modes behave identically.
+        private const int TokenLifetimeSeconds = 480;
+
         private readonly HttpClient _httpClient;
         private ClientWebSocket? _webSocket;
         private CancellationTokenSource? _cts;
@@ -84,8 +90,13 @@ namespace clicky_windows
                     "or point the STT endpoint at your Clicky Cloudflare Worker.");
             }
 
+            // Direct mode: the API key is required to mint a token. The v3/token
+            // endpoint REQUIRES an expires_in_seconds query param (a bare GET returns
+            // HTTP 422 "Field required"), so append it here -- matching the lifetime
+            // the Cloudflare Worker uses in worker mode.
+            string directTokenUrlWithLifetime = $"{DirectTokenEndpoint}?expires_in_seconds={TokenLifetimeSeconds}";
             return new AssemblyAiTokenRequest(
-                DirectTokenEndpoint,
+                directTokenUrlWithLifetime,
                 HttpMethod.Get,
                 AuthorizationHeader: assemblyAiApiKey);
         }
