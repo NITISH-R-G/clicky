@@ -57,12 +57,17 @@ namespace clicky_windows.Models
             },
             new ProviderPreset
             {
-                // Use a free, vision-capable model so Clicky's screenshot-to-AI flow
-                // works out of the box. The previous default (meta-llama/llama-3-8b-instruct:free)
-                // was retired by OpenRouter (HTTP 404) and never supported vision anyway,
-                // so screenshots would have been rejected even before retirement.
+                // Free vision-capable model verified live against
+                // https://openrouter.ai/api/v1/models (the :free image-input list changes
+                // often, so this is checked against the current catalog). Clicky sends a
+                // screenshot with every turn, so the default MUST accept image input or
+                // the AI call 404s. Past defaults that broke: meta-llama/llama-3-8b-instruct:free
+                // (retired, also non-vision) and google/gemini-2.0-flash-exp:free (retired).
+                // If this slug 404s in the future, the live free-vision list is the source
+                // of truth; gemma-4-31b-it:free / gemma-4-26b-a4b-it:free / nemotron-nano-12b-v2-vl:free
+                // are alternatives as of this check.
                 Name = "OpenRouter",
-                DefaultModel = "google/gemini-2.0-flash-exp:free",
+                DefaultModel = "google/gemma-4-31b-it:free",
                 DefaultEndpoint = "https://openrouter.ai/api/v1/chat/completions",
                 Format = "OpenAI",
                 AuthType = "Bearer",
