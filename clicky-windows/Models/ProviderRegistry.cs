@@ -57,8 +57,12 @@ namespace clicky_windows.Models
             },
             new ProviderPreset
             {
+                // Use a free, vision-capable model so Clicky's screenshot-to-AI flow
+                // works out of the box. The previous default (meta-llama/llama-3-8b-instruct:free)
+                // was retired by OpenRouter (HTTP 404) and never supported vision anyway,
+                // so screenshots would have been rejected even before retirement.
                 Name = "OpenRouter",
-                DefaultModel = "meta-llama/llama-3-8b-instruct:free",
+                DefaultModel = "google/gemini-2.0-flash-exp:free",
                 DefaultEndpoint = "https://openrouter.ai/api/v1/chat/completions",
                 Format = "OpenAI",
                 AuthType = "Bearer",

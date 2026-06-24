@@ -278,13 +278,23 @@ namespace clicky_windows
 
             try
             {
-                string terminateMessage = "{\"type\":\"Terminate\"}";
-                byte[] terminateBytes = Encoding.UTF8.GetBytes(terminateMessage);
-                await socketToClose.SendAsync(
-                    new ArraySegment<byte>(terminateBytes),
-                    WebSocketMessageType.Text,
-                    endOfMessage: true,
-                    CancellationToken.None);
+                // Only send Terminate if the socket actually reached Open. If the
+                // WebSocket connect was still in-flight (or failed) when the user
+                // released the keys, SendAsync throws InvalidOperationException
+                // "The WebSocket is not connected" -- log and skip straight to the
+                // grace/close path instead of cascading the exception.
+                bool terminateSent = false;
+                if (socketToClose.State == WebSocketState.Open)
+                {
+                    string terminateMessage = "{\"type\":\"Terminate\"}";
+                    byte[] terminateBytes = Encoding.UTF8.GetBytes(terminateMessage);
+                    await socketToClose.SendAsync(
+                        new ArraySegment<byte>(terminateBytes),
+                        WebSocketMessageType.Text,
+                        endOfMessage: true,
+                        CancellationToken.None);
+                    terminateSent = true;
+                }
 
                 // Give the receive loop a bounded grace period to deliver the final
                 // formatted turn that AssemblyAI sends in response to Terminate. The
@@ -292,7 +302,8 @@ namespace clicky_windows
                 // turn and dropping it -- which is why the log showed Listening ->
                 // Processing with no Final transcript received. If a final turn
                 // already landed (signal already set), this returns instantly.
-                if (finalTurnSignal != null)
+                // Skip the wait if we never connected (nothing to wait for).
+                if (terminateSent && finalTurnSignal != null)
                 {
                     Task delayTask = Task.Delay(FinalTurnGracePeriodMs);
                     Task finished = await Task.WhenAny(finalTurnSignal.Task, delayTask);
