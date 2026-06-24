@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
 using System.Text;
@@ -50,6 +51,21 @@ namespace clicky_windows
         // Turn transcripts keyed by turn_order so out-of-order or re-formatted
         // turns overwrite their earlier partial instead of duplicating text.
         private readonly Dictionary<int, string> _completedTurns = new();
+
+        // Audio that arrived while the WebSocket was still connecting is buffered here
+        // and flushed once the socket opens. Without this, SendAudioAsync silently drops
+        // every buffer during the ~1-2s connect window, so the first ~1.5s of speech
+        // (often the user's entire utterance on a quick press-and-release) never reaches
+        // AssemblyAI. The macOS flow pre-connects before recording; here we buffer instead.
+        // Each entry is a whole PCM chunk (as delivered by AudioRecorder.DataAvailable).
+        private readonly List<byte[]> _pendingAudioWhileConnecting = new();
+        private readonly object _pendingAudioLock = new();
+
+        // Signaled by the receive loop when a final/formatted turn (end_of_turn or
+        // turn_is_formatted) arrives, so StopSessionAsync can wait for the last
+        // transcript before closing the socket. Replaced on each session start.
+        private TaskCompletionSource<bool>? _finalTurnReceived;
+        private readonly object _finalTurnLock = new();
 
         public AssemblyAIClient()
         {
@@ -110,6 +126,14 @@ namespace clicky_windows
         {
             _cts = new CancellationTokenSource();
             _completedTurns.Clear();
+            lock (_pendingAudioLock)
+            {
+                _pendingAudioWhileConnecting.Clear();
+            }
+            lock (_finalTurnLock)
+            {
+                _finalTurnReceived = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+            }
 
             try
             {
@@ -160,7 +184,26 @@ namespace clicky_windows
                 string wsUrl = $"wss://streaming.assemblyai.com/v3/ws?{string.Join("&", queryParams)}";
                 _webSocket = new ClientWebSocket();
                 await _webSocket.ConnectAsync(new Uri(wsUrl), _cts.Token);
-                Console.WriteLine("🎙️ AssemblyAI WebSocket connected.");
+                Logger.Info("AssemblyAI WebSocket connected.");
+
+                // Flush any audio that was captured during the connect window so the
+                // start of the user's speech isn't lost (see _pendingAudioWhileConnecting).
+                byte[][] pendingAudioChunks;
+                lock (_pendingAudioLock)
+                {
+                    pendingAudioChunks = _pendingAudioWhileConnecting.Count > 0
+                        ? _pendingAudioWhileConnecting.ToArray()
+                        : Array.Empty<byte[]>();
+                    _pendingAudioWhileConnecting.Clear();
+                }
+                foreach (byte[] pendingChunk in pendingAudioChunks)
+                {
+                    await SendAudioAsync(pendingChunk);
+                }
+                if (pendingAudioChunks.Length > 0)
+                {
+                    Logger.Info($"Flushed {pendingAudioChunks.Length} buffered audio chunk(s) captured during connect");
+                }
 
                 // Start receive loop
                 _ = ReceiveLoopAsync(_cts.Token);
@@ -174,7 +217,32 @@ namespace clicky_windows
 
         public async Task SendAudioAsync(byte[] pcmData)
         {
-            if (_webSocket == null || _webSocket.State != WebSocketState.Open) return;
+            if (_webSocket == null)
+            {
+                // Session not started yet (or already torn down). If a session is
+                // starting, buffer so the audio isn't lost during the connect window.
+                if (_cts != null && !_cts.IsCancellationRequested)
+                {
+                    lock (_pendingAudioLock)
+                    {
+                        _pendingAudioWhileConnecting.Add(pcmData);
+                    }
+                }
+                return;
+            }
+
+            if (_webSocket.State != WebSocketState.Open)
+            {
+                // Connecting (or closing): buffer until open, then StartSessionAsync flushes.
+                if (_webSocket.State == WebSocketState.Connecting && _cts != null && !_cts.IsCancellationRequested)
+                {
+                    lock (_pendingAudioLock)
+                    {
+                        _pendingAudioWhileConnecting.Add(pcmData);
+                    }
+                }
+                return;
+            }
 
             try
             {
@@ -186,7 +254,7 @@ namespace clicky_windows
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️ Error sending audio to AssemblyAI: {ex.Message}");
+                Logger.Error("Error sending audio to AssemblyAI", ex);
                 ErrorOccurred?.Invoke(ex);
             }
         }
@@ -200,6 +268,14 @@ namespace clicky_windows
             ClientWebSocket? socketToClose = _webSocket;
             _webSocket = null;
 
+            // Capture the TCS we wait on, then null it so a later session's signal
+            // isn't consumed by this stop.
+            TaskCompletionSource<bool>? finalTurnSignal;
+            lock (_finalTurnLock)
+            {
+                finalTurnSignal = _finalTurnReceived;
+            }
+
             try
             {
                 string terminateMessage = "{\"type\":\"Terminate\"}";
@@ -210,8 +286,29 @@ namespace clicky_windows
                     endOfMessage: true,
                     CancellationToken.None);
 
-                // Close cleanly before cancelling so the server sees a normal closure
-                // rather than an aborted connection (which can drop the final turn).
+                // Give the receive loop a bounded grace period to deliver the final
+                // formatted turn that AssemblyAI sends in response to Terminate. The
+                // previous code closed (and cancelled) immediately, racing the final
+                // turn and dropping it -- which is why the log showed Listening ->
+                // Processing with no Final transcript received. If a final turn
+                // already landed (signal already set), this returns instantly.
+                if (finalTurnSignal != null)
+                {
+                    Task delayTask = Task.Delay(FinalTurnGracePeriodMs);
+                    Task finished = await Task.WhenAny(finalTurnSignal.Task, delayTask);
+                    if (finished == finalTurnSignal.Task)
+                    {
+                        Logger.Info("Final transcript turn received before close");
+                    }
+                    else
+                    {
+                        Logger.Warn($"No final transcript turn within {FinalTurnGracePeriodMs}ms grace — closing anyway");
+                    }
+                }
+
+                // Close cleanly so the server sees a normal closure rather than an
+                // aborted connection. Do NOT cancel the CTS before this -- the receive
+                // loop needs to run through the grace period above.
                 if (socketToClose.State == WebSocketState.Open)
                 {
                     await socketToClose.CloseAsync(
@@ -222,7 +319,7 @@ namespace clicky_windows
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"⚠️ Error closing AssemblyAI socket: {ex.Message}");
+                Logger.Error("Error closing AssemblyAI socket", ex);
             }
             finally
             {
@@ -230,8 +327,18 @@ namespace clicky_windows
                 _cts?.Cancel();
                 _cts?.Dispose();
                 _cts = null;
+                lock (_finalTurnLock)
+                {
+                    _finalTurnReceived = null;
+                }
             }
         }
+
+        // Bounded wait for AssemblyAI's final formatted turn after Terminate. Matches
+        // the macOS reference's explicit-final-transcript grace period (~1.4s) plus
+        // margin for network round-trip. Long enough to catch the final turn, short
+        // enough that the user doesn't notice a hang if the turn never comes.
+        private const int FinalTurnGracePeriodMs = 1500;
 
         private async Task ReceiveLoopAsync(CancellationToken ct)
         {
@@ -286,6 +393,14 @@ namespace clicky_windows
                         string finalTranscript = GetCombinedTranscript();
                         TranscriptUpdated?.Invoke(finalTranscript);
                         FinalTranscriptReady?.Invoke(finalTranscript);
+
+                        // Signal StopSessionAsync that a final turn landed, so it can
+                        // close promptly rather than waiting out the full grace period
+                        // on every utterance.
+                        lock (_finalTurnLock)
+                        {
+                            _finalTurnReceived?.TrySetResult(true);
+                        }
                     }
                     else
                     {
